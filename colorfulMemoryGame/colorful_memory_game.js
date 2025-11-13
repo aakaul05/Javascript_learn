@@ -1,119 +1,80 @@
-// ====== Select elements ======
-const gameContainer = document.getElementById("game-container");
-const startBtn = document.getElementById("startbtn");
-const scoreDisplay = document.getElementById("score");
-const timerDisplay = document.getElementById("timer");
-
-// ====== Game variables ======
-let colors = [
-  "red", "blue", "green", "yellow",
-  "purple", "orange", "pink", "cyan"
-]; // 8 colors -> 16 cards (pairs)
-let cards = [];
-let flippedCards = [];
-let matchedCount = 0;
+const colors = ['red', 'blue', 'green', 'purple', 'orange', 'pink', 'red', 'blue', 'green', 'purple', 'orange', 'pink'];
+let cards = shuffle(colors.concat(colors));
+let selectedCards = [];
 let score = 0;
-let timer = 30;
-let timerInterval;
-
-// ====== Shuffle helper ======
+let timeLeft = 30;
+let gameInterval;
+const startbtn = document.getElementById('startbtn');
+const gameContainer = document.getElementById('game-container');
+const scoreElement = document.getElementById('score');
+const timerElement = document.getElementById('timer');
+function generateCards() {
+    for (const color of cards) {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.dataset.color = color;
+        card.textContent = '?';
+        gameContainer.appendChild(card);
+    }
+}
 function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
 }
-
-// ====== Create cards ======
-function createCards() {
-  gameContainer.innerHTML = "";
-  const colorPairs = [...colors, ...colors]; // duplicate for pairs
-  shuffle(colorPairs);
-
-  colorPairs.forEach((color) => {
-    const card = document.createElement("div");
-    card.classList.add("card");
-    card.dataset.color = color;
-    card.addEventListener("click", flipCard);
-    gameContainer.appendChild(card);
-  });
-
-  cards = document.querySelectorAll(".card");
+function handleCardClick(event) {
+    const card = event.target;
+    if (!card.classList.contains('card') || card.classList.contains('matched')) {
+        return;
+    }
+    card.textContent = card.dataset.color;
+    card.style.backgroundColor = card.dataset.color;
+    selectedCards.push(card);
+    if (selectedCards.length === 2) {
+        setTimeout(checkMatch, 500);
+    }
 }
-
-// ====== Flip card logic ======
-function flipCard() {
-  // prevent clicking more than 2 or clicking same card twice
-  if (flippedCards.length === 2 || this.classList.contains("matched") || flippedCards.includes(this)) {
-    return;
-  }
-
-  this.style.backgroundColor = this.dataset.color;
-  flippedCards.push(this);
-
-  if (flippedCards.length === 2) {
-    checkMatch();
-  }
-}
-
-// ====== Check for match ======
 function checkMatch() {
-  const [card1, card2] = flippedCards;
-
-  if (card1.dataset.color === card2.dataset.color) {
-    // match found
-    card1.classList.add("matched");
-    card2.classList.add("matched");
-    score += 10;
-    matchedCount++;
-    flippedCards = [];
-
-    if (matchedCount === colors.length) {
-      endGame(true);
+    const [card1, card2] = selectedCards;
+    if (card1.dataset.color === card2.dataset.color) {
+        card1.classList.add('matched');
+        card2.classList.add('matched');
+        score += 2;
+        scoreElement.textContent = `Score: ${score}`;
+    } else {
+        card1.textContent = '?';
+        card2.textContent = '?';
+        card1.style.backgroundColor = '#ddd';
+        card2.style.backgroundColor = '#ddd';
     }
-  } else {
-    // not a match
-    setTimeout(() => {
-      card1.style.backgroundColor = "#ddd";
-      card2.style.backgroundColor = "#ddd";
-      flippedCards = [];
-    }, 600);
-  }
-
-  scoreDisplay.textContent = `Score: ${score}`;
+    selectedCards = [];
 }
-
-// ====== Start game ======
 function startGame() {
-  clearInterval(timerInterval);
-  score = 0;
-  matchedCount = 0;
-  timer = 30;
-  scoreDisplay.textContent = "Score: 0";
-  timerDisplay.textContent = "Time Left: 30";
-  flippedCards = [];
-
-  createCards();
-
-  cards.forEach((card) => (card.style.backgroundColor = "#ddd"));
-
-  timerInterval = setInterval(() => {
-    timer--;
-    timerDisplay.textContent = `Time Left: ${timer}`;
-    if (timer <= 0) {
-      endGame(false);
-    }
-  }, 1000);
+    let timeLeft = 30;
+    startbtn.disabled = true;
+    score = 0; // Reset score to zero
+    scoreElement.textContent = `Score: ${score}`;
+    startGameTimer(timeLeft);
+    cards = shuffle(colors.concat(colors));
+    selectedCards = [];
+    gameContainer.innerHTML = '';
+    generateCards();
+    gameContainer.addEventListener('click', handleCardClick);
 }
+function startGameTimer(timeLeft) {
+    timerElement.textContent = `Time Left: ${timeLeft}`;
+    gameInterval = setInterval(() => {
+        timeLeft--;
+        timerElement.textContent = `Time Left: ${timeLeft}`;
 
-// ====== End game ======
-function endGame(won) {
-  clearInterval(timerInterval);
-  const message = won
-    ? `🎉 You Won! Final Score: ${score}`
-    : `⏰ Time’s Up! Final Score: ${score}`;
-  alert(message);
+        if (timeLeft === 0) {
+            clearInterval(gameInterval);
+            let timeLeft = 30;
+            alert('Game Over!');
+            startbtn.disabled = false;
+        }
+    }, 1000);
 }
-
-// ====== Event listeners ======
-startBtn.addEventListener("click", startGame);
+startbtn.addEventListener('click', startGame);
